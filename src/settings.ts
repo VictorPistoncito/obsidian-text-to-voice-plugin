@@ -1,7 +1,9 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import VaultToVoice from './main';
+import type { AppLanguage } from './language';
 
 export interface VaultToVoiceSettings {
+	language: AppLanguage;
 	groqApiKey: string;
 	groqModel: string;
 	geminiApiKey: string;
@@ -12,6 +14,7 @@ export interface VaultToVoiceSettings {
 }
 
 export const DEFAULT_SETTINGS: VaultToVoiceSettings = {
+	language: 'es',
 	groqApiKey: '',
 	groqModel: 'openai/gpt-oss-20b',
 	geminiApiKey: '',

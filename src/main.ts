@@ -1,10 +1,22 @@
-import { Plugin, WorkspaceLeaf } from 'obsidian';
+import { App, Notice, Plugin, WorkspaceLeaf } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
 	VaultToVoiceSettings,
 	VaultToVoiceSettingTab,
 } from './settings';
 import { DraftView, VIEW_TYPE_DRAFT } from './ui/DraftView';
+
+interface AppWithPlugins extends App {
+	plugins: {
+		plugins: Record<string, unknown>;
+	};
+}
+
+const COMPANION_PLUGINS = [
+	{ id: 'dataview', name: 'Dataview' },
+	{ id: 'wikilink-types', name: 'Wikilink Types' },
+	{ id: 'graph-link-types', name: 'Graph Link Types' },
+];
 
 export default class VaultToVoice extends Plugin {
 	settings!: VaultToVoiceSettings;
@@ -27,9 +39,23 @@ export default class VaultToVoice extends Plugin {
 		});
 
 		this.addSettingTab(new VaultToVoiceSettingTab(this.app, this));
+
+		this.app.workspace.onLayoutReady(() => this.checkCompanionPlugins());
 	}
 
 	onunload() {}
+
+	private checkCompanionPlugins() {
+		const installedPlugins = (this.app as AppWithPlugins).plugins?.plugins ?? {};
+		const missing = COMPANION_PLUGINS.filter((plugin) => !installedPlugins[plugin.id]).map((plugin) => plugin.name);
+
+		if (missing.length > 0) {
+			new Notice(
+				`VaultByVoice: para ver los tipos de relación en el grafo, instala y activa estos plugins de la comunidad: ${missing.join(', ')}.`,
+				10000,
+			);
+		}
+	}
 
 	async activateDraftView() {
 		const { workspace } = this.app;

@@ -1,5 +1,6 @@
 import { requestUrl } from 'obsidian';
 import type { VaultToVoiceSettings } from '../settings';
+import { LANGUAGE_LABELS, type AppLanguage } from '../language';
 
 const SAMPLING_RATE = 16000;
 const SILENCE_RMS_THRESHOLD = 0.001;
@@ -68,10 +69,10 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 	return btoa(binary);
 }
 
-async function transcribeWithGroq(audioBlob: Blob, apiKey: string): Promise<string> {
+async function transcribeWithGroq(audioBlob: Blob, apiKey: string, language: AppLanguage): Promise<string> {
 	const fileBuffer = await audioBlob.arrayBuffer();
 	const { body, contentType } = buildMultipartFormData(
-		{ model: 'whisper-large-v3-turbo', language: 'es' },
+		{ model: 'whisper-large-v3-turbo', language },
 		{ fieldName: 'file', filename: 'audio.webm', contentType: audioBlob.type || 'audio/webm', data: fileBuffer },
 	);
 
@@ -107,9 +108,10 @@ async function transcribeWithHuggingFace(audioBlob: Blob, apiKey: string): Promi
 	return text;
 }
 
-async function transcribeWithGemini(audioBlob: Blob, apiKey: string, model: string): Promise<string> {
+async function transcribeWithGemini(audioBlob: Blob, apiKey: string, model: string, language: AppLanguage): Promise<string> {
 	const fileBuffer = await audioBlob.arrayBuffer();
 	const base64Audio = arrayBufferToBase64(fileBuffer);
+	const languageLabel = LANGUAGE_LABELS[language];
 
 	const response = await requestUrl({
 		url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -122,7 +124,7 @@ async function transcribeWithGemini(audioBlob: Blob, apiKey: string, model: stri
 					parts: [
 						{ inline_data: { mime_type: audioBlob.type || 'audio/webm', data: base64Audio } },
 						{
-							text: 'Transcribe este audio literalmente, en español. Devuelve únicamente el texto transcrito, sin comentarios ni explicaciones.',
+							text: `Transcribe este audio literalmente. El audio está en ${languageLabel}. Devuelve únicamente el texto transcrito, sin comentarios ni explicaciones.`,
 						},
 					],
 				},
@@ -149,7 +151,7 @@ export async function transcribeAudio(audioBlob: Blob, settings: VaultToVoiceSet
 
 	const attempts: { name: string; run: () => Promise<string> }[] = [];
 	if (settings.groqApiKey) {
-		attempts.push({ name: 'Groq', run: () => transcribeWithGroq(audioBlob, settings.groqApiKey) });
+		attempts.push({ name: 'Groq', run: () => transcribeWithGroq(audioBlob, settings.groqApiKey, settings.language) });
 	}
 	if (settings.huggingfaceApiKey) {
 		attempts.push({ name: 'Hugging Face', run: () => transcribeWithHuggingFace(audioBlob, settings.huggingfaceApiKey) });
@@ -157,7 +159,7 @@ export async function transcribeAudio(audioBlob: Blob, settings: VaultToVoiceSet
 	if (settings.geminiApiKey) {
 		attempts.push({
 			name: 'Gemini',
-			run: () => transcribeWithGemini(audioBlob, settings.geminiApiKey, settings.geminiModel),
+			run: () => transcribeWithGemini(audioBlob, settings.geminiApiKey, settings.geminiModel, settings.language),
 		});
 	}
 

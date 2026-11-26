@@ -1,8 +1,10 @@
-import { ItemView, MarkdownRenderer, WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf, setIcon } from 'obsidian';
 import VaultToVoice from '../main';
 import { VoiceRecorder } from '../audio/recorder';
 import { transcribeAudio } from '../audio/transcriber';
 import { applyVoiceEdit } from '../llm/editInterpreter';
+import { saveNoteToVault } from '../vault/writer';
+import { RelationsModal } from './RelationsModal';
 
 export const VIEW_TYPE_DRAFT = 'voice-draft-view';
 
@@ -18,7 +20,7 @@ export class DraftView extends ItemView {
 	private editorEl!: HTMLTextAreaElement;
 	private previewEl!: HTMLElement;
 	private toggleEditorButtonEl!: HTMLButtonElement;
-	private markdownPaneVisible = true;
+	private markdownPaneVisible = false;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -45,6 +47,19 @@ export class DraftView extends ItemView {
 		container.addClass('voice-draft-view');
 
 		const toolbarEl = container.createDiv({ cls: 'voice-draft-toolbar' });
+
+		const languageSelectEl = toolbarEl.createEl('select', {
+			cls: 'voice-draft-language-select',
+			attr: { 'aria-label': 'Idioma de dictado y edición' },
+		});
+		languageSelectEl.createEl('option', { text: 'Español', value: 'es' });
+		languageSelectEl.createEl('option', { text: 'English', value: 'en' });
+		languageSelectEl.value = this.plugin.settings.language;
+		languageSelectEl.addEventListener('change', () => {
+			this.plugin.settings.language = languageSelectEl.value as 'es' | 'en';
+			void this.plugin.saveSettings();
+		});
+
 		this.dictateButtonEl = toolbarEl.createEl('button', {
 			cls: 'voice-draft-record-button',
 			text: '🎙️ grabar',
@@ -61,7 +76,7 @@ export class DraftView extends ItemView {
 
 		const panesEl = container.createDiv({ cls: 'voice-draft-panes' });
 
-		this.editorPaneEl = panesEl.createDiv({ cls: 'voice-draft-pane' });
+		this.editorPaneEl = panesEl.createDiv({ cls: 'voice-draft-pane voice-draft-pane-hidden' });
 		this.editorPaneEl.createEl('h4', { text: 'Texto (Markdown)' });
 		this.editorEl = this.editorPaneEl.createEl('textarea', {
 			cls: 'voice-draft-editor',
@@ -78,13 +93,37 @@ export class DraftView extends ItemView {
 			attr: { 'aria-label': 'Mostrar/ocultar el editor de Markdown' },
 		});
 		this.toggleEditorButtonEl.addEventListener('click', () => this.toggleMarkdownPane());
-		setIcon(this.toggleEditorButtonEl, 'chevron-right');
+		setIcon(this.toggleEditorButtonEl, this.markdownPaneVisible ? 'chevron-left' : 'chevron-right');
 
 		const previewPane = panesEl.createDiv({ cls: 'voice-draft-pane' });
 		previewPane.createEl('h4', { text: 'Previsualización' });
 		this.previewEl = previewPane.createDiv({ cls: 'voice-draft-preview' });
 
 		await this.renderPreview();
+
+		const footerEl = container.createDiv({ cls: 'voice-draft-footer' });
+		const relateButtonEl = footerEl.createEl('button', {
+			cls: 'voice-draft-relate-button',
+			text: 'Establecer relación',
+		});
+		relateButtonEl.addEventListener('click', () => {
+			new RelationsModal(
+				this.app,
+				this.plugin.settings,
+				() => this.markdown,
+				(updated) => {
+					this.markdown = updated;
+					this.editorEl.value = updated;
+					void this.renderPreview();
+				},
+			).open();
+		});
+
+		const saveButtonEl = footerEl.createEl('button', {
+			cls: 'voice-draft-save-button',
+			text: 'Guardar en Vault',
+		});
+		saveButtonEl.addEventListener('click', () => void this.saveToVault());
 	}
 
 	async onClose(): Promise<void> {
@@ -161,10 +200,25 @@ export class DraftView extends ItemView {
 		}
 	}
 
+	private async saveToVault(): Promise<void> {
+		if (!this.markdown.trim()) {
+			new Notice('El borrador está vacío, no hay nada que guardar.');
+			return;
+		}
+
+		try {
+			const file = await saveNoteToVault(this.app, this.markdown);
+			new Notice(`Nota guardada: ${file.basename}`);
+			await this.app.workspace.getLeaf(true).openFile(file);
+		} catch (error) {
+			new Notice(`Error al guardar la nota: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
 	private toggleMarkdownPane(): void {
 		this.markdownPaneVisible = !this.markdownPaneVisible;
 		this.editorPaneEl.toggleClass('voice-draft-pane-hidden', !this.markdownPaneVisible);
-		setIcon(this.toggleEditorButtonEl, this.markdownPaneVisible ? 'chevron-right' : 'chevron-left');
+		setIcon(this.toggleEditorButtonEl, this.markdownPaneVisible ? 'chevron-left' : 'chevron-right');
 	}
 
 	private async renderPreview(): Promise<void> {
