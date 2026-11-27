@@ -1,8 +1,310 @@
-/*
+.voice-draft-view {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75em;
+	padding: 0.5em;
+	height: 100%;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.voice-draft-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 0.75em;
+}
 
-If your plugin does not need CSS, delete this file.
+.voice-draft-record-button {
+	font-weight: 600;
+}
 
-*/
+.voice-draft-language-select {
+	flex: 0 0 auto;
+}
+
+.voice-draft-status {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.voice-draft-panes {
+	display: flex;
+	flex: 1;
+	gap: 0.75em;
+	min-height: 0;
+}
+
+.voice-draft-pane {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+
+.voice-draft-pane h4 {
+	margin: 0 0 0.25em 0;
+}
+
+.voice-draft-editor {
+	flex: 1;
+	resize: none;
+	width: 100%;
+	font-family: var(--font-monospace);
+}
+
+.voice-draft-preview {
+	flex: 1;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 0.5em;
+}
+
+.voice-draft-pane-hidden {
+	display: none;
+}
+
+.voice-draft-toggle-editor {
+	flex: 0 0 auto;
+	width: 1.25em;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	align-self: stretch;
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.voice-draft-toggle-editor:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.voice-draft-footer {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* Modal "Establecer relación" */
+
+.relations-modal.modal {
+	width: 90vw;
+	max-width: 1200px;
+	height: 85vh;
+}
+
+.relations-modal .modal-content {
+	position: relative;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.relations-help-button {
+	position: absolute;
+	top: 0;
+	right: 2.25em;
+	width: 1.75em;
+	height: 1.75em;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--text-faint);
+	cursor: pointer;
+}
+
+.relations-help-button:hover {
+	color: var(--text-muted);
+}
+
+.relations-types-panel {
+	position: absolute;
+	top: 1.75em;
+	right: 2.25em;
+	width: 320px;
+	max-height: 60vh;
+	overflow-y: auto;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 0.75em;
+	box-shadow: var(--shadow-s);
+	z-index: 10;
+}
+
+.relations-types-panel-hidden {
+	display: none;
+}
+
+.relations-types-panel h4 {
+	margin: 0 0 0.5em 0;
+}
+
+.relations-types-panel ul {
+	margin: 0;
+	padding-left: 1.1em;
+}
+
+.relations-types-panel li {
+	margin-bottom: 0.4em;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+}
+
+.relations-body {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+.relations-toolbar {
+	flex: 0 0 auto;
+	margin-bottom: 0.75em;
+}
+
+.relations-pick-button {
+	font-weight: 600;
+}
+
+.relations-picker {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.relations-picker-header {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	margin-bottom: 0.75em;
+}
+
+.relations-picker-header h4 {
+	margin: 0;
+}
+
+.relations-back-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.3em 0.5em;
+}
+
+.relations-picker-list {
+	flex: 1;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.relations-note-item {
+	padding: 0.6em 0.9em;
+	border-bottom: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+}
+
+.relations-note-item:last-child {
+	border-bottom: none;
+}
+
+.relations-note-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.relations-note-stack {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75em;
+	min-width: 0;
+	overflow-y: auto;
+	padding-right: 0.25em;
+}
+
+.relations-voice-controls {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75em;
+}
+
+.relations-note-card {
+	flex: 0 0 auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 0.75em;
+	display: flex;
+	flex-direction: column;
+	max-height: 45vh;
+}
+
+.relations-note-card-current {
+	border-color: var(--interactive-accent);
+}
+
+.relations-note-card h4 {
+	margin: 0 0 0.5em 0;
+	flex: 0 0 auto;
+}
+
+.relations-card-row {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+	gap: 0.5em;
+}
+
+.relations-card-raw {
+	flex: 1;
+	overflow: auto;
+	min-width: 0;
+	margin: 0;
+	padding: 0.5em;
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	font-family: var(--font-monospace);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.relations-card-raw-hidden {
+	display: none;
+}
+
+.relations-card-toggle {
+	flex: 0 0 auto;
+	width: 1.25em;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	align-self: stretch;
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.relations-card-toggle:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.relations-note-card-body {
+	flex: 1;
+	overflow-y: auto;
+	min-width: 0;
+	min-height: 0;
+}
