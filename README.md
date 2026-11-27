@@ -1,92 +1,127 @@
-# Obsidian Sample Plugin
+🎙️ Obsidian Voice Dictation Plugin: Project Context
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+A custom Obsidian plugin to dictate notes by voice, refine them in a draft view, and link them to other notes, built primarily as a learning project for developing AI products.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+Repo: C:\Users\victo\source\repos\obsidian-text-to-voice-plugin
+Test vault: D:\Obsidian\Plugin voz
+Environment: Windows · Git Bash (MINGW64) · VS Code · Node v24.19.0
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+Table of contents
+Project idea
+Architecture decisions
+Technologies
+Progress so far
+Current difficulty (unresolved)
+Work to do
+1. Project idea
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+Build an Obsidian plugin that lets the user dictate text by voice and turn it into vault entries, with a review step before saving and suggestions for links to other existing notes.
 
-## First time developing plugins?
+Main goal: learn how to build AI products. The functionality partly exists already through community plugins, but building a custom plugin means working on the parts that are real engineering challenges.
 
-Quick starting guide for new plugin devs:
+Desired functionality
+#	Stage	What happens
+1	Dictation and cleanup	The user dictates; the audio is transcribed and cleaned of filler words, stutters and repetitions (via LLM).
+2	Iterative voice editing	The cleaned text appears in a draft state (not yet in the vault). The user keeps modifying it by voice: add, replace or delete text, and apply Markdown (headings, bold, lists…). Repeatable as many times as needed.
+3	Connections (optional)	Once finalized, the plugin suggests links to other vault notes based on content similarity / keywords. The user chooses which to accept.
+4	Saving	Only on confirmation, the final text (with accepted links) is written to the vault.
+2. Architecture decisions
+Core principles
+Existing plugins are not used as black boxes (Whisper, Smart Connections) for the key parts, because the goal is to learn by building. They serve as references or occasional supporting pieces.
+Custom plugin in TypeScript with its own pipeline: audio capture → transcription → cleanup → iterative editing → connections → saving
+Nothing is written to the vault until the final step. Every earlier stage lives in memory only.
+Flow state machine
+[1. RECORDING] → [2. DRAFT / EDITING] → [3. CONNECTIONS] → [4. SAVED]
+Key decisions
+Topic	Decision
+Smart Connections	Used as a reference / data source. Its embeddings are stored as JSON in the vault's .smart-env/ folder, so candidate similar notes can be read directly without reimplementing embeddings. A more tightly coupled mode via its public API (app.plugins.plugins['smart-connections']) exists but is not explored yet.
+editInterpreter.ts	Handled entirely by the LLM for now (it receives the current text + the spoken instruction and returns the result). Optimization with custom rules is explicitly postponed.
+Possible future improvement	Have the LLM return structured operations like {action, find, with} instead of rewriting the whole text each time. To be evaluated while iterating on the project.
+Planned folder structure
+your-plugin/
+├── main.ts
+├── manifest.json
+├── src/
+│   ├── audio/
+│   │   ├── recorder.ts            # audio capture (MediaRecorder)
+│   │   └── transcriber.ts         # Whisper API call
+│   ├── llm/
+│   │   ├── cleaner.ts             # initial cleanup (filler words, etc.)
+│   │   └── editInterpreter.ts     # voice editing instructions (LLM-based for now)
+│   ├── ui/
+│   │   └── DraftView.ts           # view with text + controls + suggestions
+│   ├── connections/
+│   │   └── smartEnvReader.ts      # reads .smart-env/ to suggest links
+│   └── vault/
+│       └── writer.ts              # only called on confirmation
+└── state/
+    └── draftStore.ts              # in-memory state of the current draft
+3. Technologies
+Area	Technology	Purpose
+Language / API	TypeScript + Obsidian API	Plugin, Vault, ItemView/Modal, Editor, Settings tab
+Build	Node.js / npm, esbuild	Configured in esbuild.config.mjs; npm run dev runs watch mode (main.ts → main.js)
+Audio capture	MediaRecorder API	Native to the browser/Electron; no external libraries needed
+Transcription	Whisper API	OpenAI / Groq / Azure, or local via Ollama / local server
+LLM	Claude API	Text cleanup, voice-edit interpretation, and (later) relationship-type classification between notes
+Version control	Git / GitHub	Forked from obsidian-sample-plugin (official template)
+Reference	Smart Connections plugin	Open source; embeddings/similarity via .smart-env/
+4. Progress so far
+#	Step	Status
+1	obsidian-sample-plugin forked locally	✅
+2	Test vault created and moved to D:\Obsidian\Plugin voz (moved from D:\Program Files\Plugin voz over a suspected antivirus/permissions conflict, later ruled out as root cause)	✅
+3	Symlink created between project folder and <vault>/.obsidian/plugins/obsidian-text-to-voice-plugin	⚠️ partial
+4	Node.js v24.19.0 installed; npm install ran successfully	✅
+5	npm run dev runs; esbuild watch compiles ([watch] build finished, watching for changes...)	✅
+6	main.js is generated correctly in the project root	✅
+7	Plugin is listed in Obsidian (Settings → Community plugins) as "Sample Plugin"	✅
+About the symlink (step 3)
+Created with ln -s from Git Bash, run as administrator, with Windows Developer Mode enabled.
+By all indications it is a Windows junction, not a pure Unix symlink: ls -la and stat show it as a normal directory, without the l or the -> arrow.
+Normal files (manifest.json, prueba.txt, etc.) propagate correctly in both directions: create, read and delete all work.
+Exception: main.js (see next section).
+5. Current difficulty (unresolved)
+❌ main.js is not accessible through the symlink/junction
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+The rest of the project files are, but main.js is not.
 
-## Releasing new releases
+Observed behavior
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+Check	Result
+main.js in the project root	✅ exists
+ls -la / stat on the vault side	❌ main.js not listed
+cat / wc -l on the vault path	❌ "No such file or directory"
+Temporary files from esbuild (.tmp, etc.)	✅ none, so a rename problem is ruled out
+Create / read / delete of other files through the link	✅ works in both directions
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+Why it blocks the plugin
 
-## Adding your plugin to the community plugin list
+Obsidian reads manifest.json (so the plugin appears in the list), but when the user tries to enable it, Obsidian must load and execute main.js. It cannot read it through the link, so activation fails silently and no clear error appears in the DevTools console.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+Unconfirmed hypothesis
 
-## How to use
+It may be related to how Windows handles the file descriptors esbuild leaves open when writing over a junction, or to a behavior difference between mklink /J (junction) and mklink /D (directory symlink). Not explored yet, because ln -s from Git Bash does not let you choose which of the two it creates.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+Alternative already identified (not implemented)
 
-## Manually installing the plugin
+Modify esbuild.config.mjs so it automatically copies main.js, manifest.json and styles.css to the vault folder after each build, instead of relying on Obsidian reading them through the link.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+The user prefers to keep investigating the symlink before resorting to the copy approach.
 
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
-```
-
-## API Documentation
-
-See https://docs.obsidian.md
+6. Work to do
+🔧 Environment setup
+[ ] Resolve main.js not being accessible through the symlink/junction (or migrate to the automatic copy script in esbuild.config.mjs)
+[ ] Get the sample plugin enabled in Obsidian and validate the basic end-to-end flow (ribbon icon, command palette command, sample modal)
+[ ] Edit manifest.json with the final id, name and description
+[ ] Install the Hot Reload plugin to speed up the development cycle
+🧩 Core pipeline
+[ ] recorder.ts: audio capture via MediaRecorder
+[ ] transcriber.ts: Whisper API call
+[ ] cleaner.ts: filler word/stutter cleanup via LLM
+[ ] DraftView.ts: editable draft view
+[ ] editInterpreter.ts: voice editing instructions via LLM (no custom-rule optimization for now)
+[ ] smartEnvReader.ts: read .smart-env/ for related-note suggestions
+[ ] writer.ts: final write to the vault
+[ ] Settings tab to configure API keys (Whisper, Claude) without hardcoding them
+🔗 Relationship features (later)
+[ ] Define the taxonomy of relationship types between notes (cause-effect, contradiction, example, etc.). This is an additional feature on top of Smart Connections' suggestions.
+[ ] Decide the format for storing typed relationships in notes (YAML frontmatter vs. a separate file)
